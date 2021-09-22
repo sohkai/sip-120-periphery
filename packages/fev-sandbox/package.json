@@ -1,0 +1,32 @@
+{
+  "name": "fev-sandbox",
+  "private": true,
+  "version": "0.0.1",
+  "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.6",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.7",
+    "glob": "^7.1.7",
+    "hardhat": "^2.6.4",
+    "hardhat-local-networks-config-plugin": "^0.0.6",
+    "inquirer": "^8.1.5",
+    "openzeppelin-solidity-2.3.0": "npm:openzeppelin-solidity@2.3.0",
+    "prettier": "^2.4.1",
+    "prettier-plugin-solidity": "*",
+    "solhint": "^3.3.6",
+    "solhint-plugin-prettier": "^0.0.5"
+  },
+  "scripts": {
+    "format": "prettier --write \"contracts/**/*.sol\" \"**/*.js\" \"**/*.md\" \"**/*.yml\" \"**/*.json\"",
+    "lint": "solhint \"contracts/*.sol\" && solhint \"contracts/test-helpers/*.sol\"",
+    "compile": "hardhat compile",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
