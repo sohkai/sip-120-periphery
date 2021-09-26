@@ -82,8 +82,7 @@ contract SynthetixSandboxAMM is Owned, MixinSystemSettings {
         */
         bytes32 sourceCurrencyKey,
         uint sourceAmount,
-        bytes32 destinationCurrencyKey,
-        bytes32 /* trackingCode */
+        bytes32 destinationCurrencyKey
     ) external returns (uint amountReceived) {
         address from = msg.sender;
         address destinationAddress = msg.sender;

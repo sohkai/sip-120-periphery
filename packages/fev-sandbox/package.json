@@ -25,8 +25,8 @@
   },
   "scripts": {
     "format": "prettier --write \"contracts/**/*.sol\" \"**/*.js\" \"**/*.md\" \"**/*.yml\" \"**/*.json\"",
-    "lint": "solhint \"contracts/*.sol\" && solhint \"contracts/test-helpers/*.sol\"",
+    "lint": "solhint \"contracts/*.sol\"",
     "compile": "hardhat compile",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:mainnet-e2e": "hardhat test"
   }
 }

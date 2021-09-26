@@ -2,7 +2,9 @@ require('@nomiclabs/hardhat-waffle')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-local-networks-config-plugin')
 
-module.exports = {
+const mainnetE2eConfiguration = require('./config/mainnet-e2e')
+
+const config = {
   solidity: {
     version: '0.5.16',
     settings: {
@@ -22,3 +24,14 @@ module.exports = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 }
+
+const forkingEnabled = !!process.env.FORK_NODE
+if (forkingEnabled) {
+  config.networks.hardhat.forking = {
+    url: process.env.FORK_NODE,
+    blockNumber: mainnetE2eConfiguration.forkBlockNumber,
+    enabled: true,
+  }
+}
+
+module.exports = config
