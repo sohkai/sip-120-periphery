@@ -1,14 +1,22 @@
 pragma solidity ^0.5.16;
 
 import "./synthetix/interfaces/IAddressResolver.sol";
+import "./synthetix/MixinResolver.sol";
 import "./synthetix/Owned.sol";
 
+/// @dev AddressResolver that fallsback to an existing AddressResolver when no overridden entries exiset
 contract OverrideableFallbackAddressResolver is IAddressResolver, Owned {
     IAddressResolver public fallbackResolver;
     mapping(bytes32 => address) public overriddenRepository;
 
     constructor(address _owner, IAddressResolver _fallbackResolver) public Owned(_owner) {
         fallbackResolver = _fallbackResolver;
+    }
+
+    function rebuildCaches(MixinResolver[] calldata destinations) external {
+        for (uint i = 0; i < destinations.length; i++) {
+            destinations[i].rebuildCache();
+        }
     }
 
     function overrideAddresses(bytes32[] calldata names, address[] calldata destinations) external onlyOwner {

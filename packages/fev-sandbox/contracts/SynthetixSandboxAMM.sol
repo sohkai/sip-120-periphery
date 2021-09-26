@@ -39,11 +39,15 @@ contract SynthetixSandboxAMM is Owned, MixinSystemSettings {
         addresses = combineArrays(existingAddresses, newAddresses);
     }
 
-    function exchangeRates() internal view returns (IExchangeRates) {
+    function flexibleStoragePublic() public view returns (address) {
+        return address(flexibleStorage());
+    }
+
+    function exchangeRates() public view returns (IExchangeRates) {
         return IExchangeRates(requireAndGetAddress(CONTRACT_EXRATES));
     }
 
-    function issuer() internal view returns (IIssuer) {
+    function issuer() public view returns (IIssuer) {
         return IIssuer(requireAndGetAddress(CONTRACT_ISSUER));
     }
 
@@ -58,6 +62,11 @@ contract SynthetixSandboxAMM is Owned, MixinSystemSettings {
             IERC20 token = IERC20(tokens[i]);
             token.safeTransfer(owner, token.balanceOf(address(this)));
         }
+    }
+
+    function sweepEth() external onlyOwner {
+        address payable payableOwner = address(uint160(owner));
+        payableOwner.transfer(address(this).balance);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
