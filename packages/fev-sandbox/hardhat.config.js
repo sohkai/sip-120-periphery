@@ -18,6 +18,8 @@ const config = {
     hardhat: {},
     mainnet: {
       url: process.env.MAINNET_NODE || '',
+      // Sometimes a manual gasPrice is needed to ensure tx go through
+      // gasPrice: 65000000000,
     },
   },
   etherscan: {

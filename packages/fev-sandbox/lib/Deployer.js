@@ -10,11 +10,16 @@ const precompiledArtifacts = {
 
 class Deployer {
   constructor(accounts, config) {
+    if (!accounts.deployer || !accounts.owner) {
+      throw new Error('Deployer requires unlocked deployer and owner accounts')
+    }
+
     this.accounts = accounts
     this.config = config
+    this.deployedContracts = {}
   }
 
-  async deploy() {
+  async deploy({ verbose } = {}) {
     // Contract factories from in-repo sources
     const OwnedMulticallFactory = await ethers.getContractFactory('OwnedMulticall')
     const overrideableFallbackAddressResolverFactory = await ethers.getContractFactory(
@@ -47,21 +52,57 @@ class Deployer {
     })
 
     // Deploy contracts
+    if (verbose) {
+      console.log('Deploying sandbox with configuration:')
+      console.log(`  - deployer: ${this.accounts.deployer.address}`)
+      console.log(`  - owner: ${this.config.owner}`)
+      console.log(`  - multicall:`)
+      console.log(`    - owner: ${this.config.owner}`)
+      console.log(`  - addressResolver:`)
+      console.log(`    - owner: multicall`)
+      console.log(`    - fallback: ${this.config.synthetix.addressResolver}`)
+      console.log(`  - flexibleStorage:`)
+      console.log(`    - resolver: addressResolver`)
+      console.log(`    - fallback: ${this.config.synthetix.flexibleStorage}`)
+      console.log(`  - systemSettings:`)
+      console.log(`    - owner: multicall`)
+      console.log(`    - resolver: addressResolver`)
+      console.log(`  - exchangeRates:`)
+      console.log(`    - owner: multicall`)
+      console.log(`    - oracle: address(0)`)
+      console.log(`    - resolver: addressResolver`)
+      console.log(`  - sandboxAmm:`)
+      console.log(`    - owner: ${this.config.depositor}`)
+      console.log(`    - resolver: addressResolver`)
+      console.log()
+    }
+
     const multicall = await OwnedMulticallFactory.deploy(this.config.owner)
+    if (verbose) {
+      console.log(`Deploying multicall with tx: ${multicall.deployTransaction.hash}`)
+    }
+
     const addressResolver = await overrideableFallbackAddressResolverFactory.deploy(
       multicall.address,
       this.config.synthetix.addressResolver
     )
-    await addressResolver.deployed()
+    if (verbose) {
+      console.log(`Deploying addressResolver with tx: ${addressResolver.deployTransaction.hash}`)
+    }
 
     const flexibleStorage = await overrideableFallbackFlexibleStorageFactory.deploy(
       addressResolver.address,
       this.config.synthetix.flexibleStorage
     )
+    if (verbose) {
+      console.log(`Deploying flexibleStorage with tx: ${flexibleStorage.deployTransaction.hash}`)
+    }
     await flexibleStorage.deployed()
 
     const systemSettings = await sip120SystemSettingsFactory.deploy(multicall.address, addressResolver.address)
-    await systemSettings.deployed()
+    if (verbose) {
+      console.log(`Deploying systemSettings with tx: ${systemSettings.deployTransaction.hash}`)
+    }
 
     const exchangeRates = await sip120ExchangeRatesWithDexPricingFactory.deploy(
       multicall.address, // owner
@@ -70,9 +111,15 @@ class Deployer {
       [], // currencyKeys
       [] // rates
     )
+    if (verbose) {
+      console.log(`Deploying exchangeRates with tx: ${exchangeRates.deployTransaction.hash}`)
+    }
+    await exchangeRates.deployed()
 
     const sandboxAmm = await synthetixSandboxAmmFactory.deploy(this.config.depositor, addressResolver.address)
-    await sandboxAmm.deployed()
+    if (verbose) {
+      console.log(`Deploying sandboxAmm with tx: ${sandboxAmm.deployTransaction.hash}`)
+    }
 
     // Configure for initial settings, batching them through a multicall
     const calls = []
@@ -147,9 +194,16 @@ class Deployer {
       })
     }
 
-    await multicall.connect(this.accounts.owner).aggregate(calls)
+    await multicall.deployed()
+    await addressResolver.deployed()
+    await systemSettings.deployed()
+    await sandboxAmm.deployed()
+    const callsTx = await multicall.connect(this.accounts.owner).aggregate(calls)
+    if (verbose) {
+      console.log(`Setting configuration with multicall tx: ${callsTx.hash}`)
+    }
 
-    return {
+    this.deployedContracts = {
       addressResolver,
       exchangeRates,
       flexibleStorage,
@@ -157,6 +211,45 @@ class Deployer {
       sandboxAmm,
       systemSettings,
     }
+    if (verbose) {
+      console.log()
+      console.log('Deployed contracts to:')
+      console.log(`  - multicall: ${multicall.address}`)
+      console.log(`  - addressResolver: ${addressResolver.address}`)
+      console.log(`  - flexibleStorage: ${flexibleStorage.address}`)
+      console.log(`  - systemSettings: ${systemSettings.address}`)
+      console.log(`  - exchangeRates: ${exchangeRates.address}`)
+      console.log(`  - sandboxAmm: ${sandboxAmm.address}`)
+    }
+    return this.deployedContracts
+  }
+
+  async verify() {
+    console.log('Verifying deployed contracts on Etherscan...')
+    console.log('  verifying addressResolver...')
+    await hre.run('verify:verify', {
+      address: this.deployedContracts.addressResolver.address,
+      constructorArguments: [this.deployedContracts.multicall.address, this.config.synthetix.addressResolver],
+    })
+    console.log('  verifying flexibleStorage...')
+    await hre.run('verify:verify', {
+      address: this.deployedContracts.flexibleStorage.address,
+      constructorArguments: [this.deployedContracts.addressResolver.address, this.config.synthetix.flexibleStorage],
+    })
+    console.log('  verifying multicall...')
+    await hre.run('verify:verify', {
+      address: this.deployedContracts.multicall.address,
+      constructorArguments: [this.config.owner],
+    })
+    console.log('  verifying sandboxAmm...')
+    await hre.run('verify:verify', {
+      address: this.deployedContracts.sandboxAmm.address,
+      constructorArguments: [this.config.depositor, this.deployedContracts.addressResolver.address],
+    })
+
+    console.log(
+      'Verification complete. Some contracts require manual verification: ExchangeRatesWithDexPricing, SystemSettings'
+    )
   }
 }
 
