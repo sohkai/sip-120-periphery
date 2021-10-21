@@ -1,0 +1,6 @@
+SELECT logs.block_timestamp, logs.data
+FROM `bigquery-public-data.crypto_ethereum.logs` AS logs
+WHERE logs.address = '0x37bc7498f4ff12c19678ee8fe19d713b87f6a9e6' -- ETH/USD aggregator
+    AND logs.block_number >= 12150245 -- 01/04/2021
+    AND '0xf6a97944f31ea060dfde0566e4167c1a1082551e64b60ecb14d599a9d023d451' IN UNNEST(logs.topics)
+ORDER BY logs.block_timestamp
